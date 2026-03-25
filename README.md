@@ -1,0 +1,74 @@
+# TerrariumDaytona
+
+[![Hex.pm](https://img.shields.io/hexpm/v/terrarium_daytona.svg)](https://hex.pm/packages/terrarium_daytona)
+[![HexDocs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/terrarium_daytona)
+[![CI](https://github.com/pepicrft/terrarium_daytona/actions/workflows/terrarium_daytona.yml/badge.svg)](https://github.com/pepicrft/terrarium_daytona/actions/workflows/terrarium_daytona.yml)
+
+A [Daytona](https://daytona.io) provider for [Terrarium](https://github.com/pepicrft/terrarium) sandbox environments.
+
+## Installation
+
+Add `terrarium_daytona` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:terrarium, "~> 0.1.0"},
+    {:terrarium_daytona, "~> 0.1.0"}
+  ]
+end
+```
+
+## Configuration
+
+```elixir
+# config/runtime.exs
+config :terrarium,
+  default: :daytona,
+  providers: [
+    daytona: {Terrarium.Providers.Daytona,
+      api_key: System.fetch_env!("DAYTONA_API_KEY")
+    }
+  ]
+```
+
+### Options
+
+- `:api_key` - (required) Daytona API key
+- `:api_url` - base URL for the Daytona API (default: `"https://app.daytona.io/api"`)
+- `:toolbox_url` - base URL for the toolbox proxy (default: `"https://proxy.app.daytona.io/toolbox"`)
+- `:organization_id` - Daytona organization ID (optional)
+- `:target` - target region (optional)
+- `:snapshot` - base image or snapshot (optional)
+- `:class` - sandbox class (optional)
+- `:cpu` - number of vCPUs (optional)
+- `:memory` - memory in GB (optional)
+- `:disk` - disk in GB (optional)
+- `:user` - sandbox user (default: `"daytona"`)
+- `:env` - environment variables map (optional)
+- `:auto_stop_interval` - minutes before auto-stop (optional)
+
+## Usage
+
+```elixir
+# Create a sandbox using the configured default
+{:ok, sandbox} = Terrarium.create(image: "debian:12")
+
+# Or specify the provider explicitly
+{:ok, sandbox} = Terrarium.create(:daytona, snapshot: "ubuntu-4vcpu-8ram-100gb")
+
+# Execute commands
+{:ok, result} = Terrarium.exec(sandbox, "echo hello")
+IO.puts(result.stdout)
+
+# File operations
+:ok = Terrarium.write_file(sandbox, "/home/daytona/hello.txt", "Hello from Terrarium!")
+{:ok, content} = Terrarium.read_file(sandbox, "/home/daytona/hello.txt")
+
+# Clean up
+:ok = Terrarium.destroy(sandbox)
+```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
