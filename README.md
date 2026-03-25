@@ -69,6 +69,33 @@ IO.puts(result.stdout)
 :ok = Terrarium.destroy(sandbox)
 ```
 
+## Telemetry
+
+This provider emits the following [`:telemetry`](https://hex.pm/packages/telemetry) events, in addition to the generic events from `Terrarium.Telemetry`:
+
+| Event | Measurements | Metadata |
+|---|---|---|
+| `[:terrarium, :daytona, :api_request, :start]` | `%{system_time: integer}` | `%{method: atom, url: String.t()}` |
+| `[:terrarium, :daytona, :api_request, :stop]` | `%{duration: integer}` | `%{method: atom, url: String.t(), status: integer}` (success) or `%{method: atom, url: String.t(), error: term()}` (failure) |
+| `[:terrarium, :daytona, :api_request, :exception]` | `%{duration: integer}` | `%{method: atom, url: String.t()}` |
+| `[:terrarium, :daytona, :poll]` | `%{remaining_timeout: integer}` | `%{sandbox_id: String.t(), poll_interval: integer}` |
+
+### Example
+
+```elixir
+:telemetry.attach_many(
+  "daytona-logger",
+  [
+    [:terrarium, :daytona, :api_request, :stop],
+    [:terrarium, :daytona, :poll]
+  ],
+  fn event, measurements, metadata, _config ->
+    Logger.info("#{inspect(event)}: #{inspect(measurements)} #{inspect(metadata)}")
+  end,
+  nil
+)
+```
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

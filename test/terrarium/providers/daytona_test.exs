@@ -30,4 +30,72 @@ defmodule Terrarium.Providers.DaytonaTest do
              )
     end
   end
+
+  describe "telemetry" do
+    test "emits [:terrarium, :daytona, :api_request, :start | :stop] on API calls" do
+      ref = make_ref()
+      pid = self()
+
+      handler = fn event, measurements, metadata, _config ->
+        send(pid, {ref, event, measurements, metadata})
+      end
+
+      events = [
+        [:terrarium, :daytona, :api_request, :start],
+        [:terrarium, :daytona, :api_request, :stop]
+      ]
+
+      handler_id = "test-api-request-#{inspect(ref)}"
+      :telemetry.attach_many(handler_id, events, handler, nil)
+
+      # Trigger an API call that will fail (connection refused on port 0)
+      Daytona.status(%Terrarium.Sandbox{
+        id: "telemetry-test",
+        provider: Daytona,
+        state: %{
+          "api_key" => "test-key",
+          "api_url" => "http://localhost:0",
+          "toolbox_url" => "http://localhost:0",
+          "sandbox_id" => "telemetry-test",
+          "organization_id" => nil
+        }
+      })
+
+      assert_receive {^ref, [:terrarium, :daytona, :api_request, :start], %{system_time: _}, %{method: :get, url: _}}
+
+      assert_receive {^ref, [:terrarium, :daytona, :api_request, :stop], %{duration: _},
+                      %{method: :get, url: _, error: _}}
+
+      :telemetry.detach(handler_id)
+    end
+
+    test "stop metadata includes error on connection failure" do
+      ref = make_ref()
+      pid = self()
+
+      handler = fn event, measurements, metadata, _config ->
+        send(pid, {ref, event, measurements, metadata})
+      end
+
+      events = [[:terrarium, :daytona, :api_request, :stop]]
+      handler_id = "test-api-error-meta-#{inspect(ref)}"
+      :telemetry.attach_many(handler_id, events, handler, nil)
+
+      Daytona.destroy(%Terrarium.Sandbox{
+        id: "telemetry-test",
+        provider: Daytona,
+        state: %{
+          "api_key" => "test-key",
+          "api_url" => "http://localhost:0",
+          "toolbox_url" => "http://localhost:0",
+          "sandbox_id" => "telemetry-test",
+          "organization_id" => nil
+        }
+      })
+
+      assert_receive {^ref, [:terrarium, :daytona, :api_request, :stop], %{duration: _}, %{method: :delete, error: _}}
+
+      :telemetry.detach(handler_id)
+    end
+  end
 end
