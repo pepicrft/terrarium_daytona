@@ -35,6 +35,8 @@ defmodule Terrarium.Providers.Daytona do
 
   use Terrarium.Provider
 
+  @telemetry_prefix [:terrarium, :daytona]
+
   @default_api_url "https://app.daytona.io/api"
   @default_toolbox_url "https://proxy.app.daytona.io/toolbox"
   @default_poll_interval 1_000
@@ -236,7 +238,19 @@ defmodule Terrarium.Providers.Daytona do
       |> then(fn base -> if raw, do: Keyword.put(base, :decode_body, false), else: base end)
       |> Keyword.merge(opts)
 
-    Req.request(req_opts)
+    metadata = %{method: method, url: url}
+
+    :telemetry.span(@telemetry_prefix ++ [:api_request], metadata, fn ->
+      result = Req.request(req_opts)
+
+      stop_metadata =
+        case result do
+          {:ok, %{status: status}} -> %{status: status}
+          {:error, reason} -> %{error: reason}
+        end
+
+      {result, Map.merge(metadata, stop_metadata)}
+    end)
   end
 
   defp wait_for_started(sandbox, _poll_interval, timeout) when timeout <= 0 do
@@ -245,6 +259,11 @@ defmodule Terrarium.Providers.Daytona do
   end
 
   defp wait_for_started(sandbox, poll_interval, timeout) do
+    :telemetry.execute(@telemetry_prefix ++ [:poll], %{remaining_timeout: timeout}, %{
+      sandbox_id: sandbox.id,
+      poll_interval: poll_interval
+    })
+
     case status(sandbox) do
       :running ->
         {:ok, sandbox}
