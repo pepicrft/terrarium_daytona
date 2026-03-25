@@ -239,7 +239,7 @@ defmodule Terrarium.Providers.Daytona do
     Req.request(req_opts)
   end
 
-  defp wait_for_started(sandbox, poll_interval, timeout) when timeout <= 0 do
+  defp wait_for_started(sandbox, _poll_interval, timeout) when timeout <= 0 do
     destroy(sandbox)
     {:error, :create_timeout}
   end
@@ -264,7 +264,10 @@ defmodule Terrarium.Providers.Daytona do
   end
 
   defp map_status("started"), do: :running
-  defp map_status(s) when s in ~w(creating starting restoring pulling_snapshot building_snapshot pending_build), do: :creating
+
+  defp map_status(s) when s in ~w(creating starting restoring pulling_snapshot building_snapshot pending_build),
+    do: :creating
+
   defp map_status(s) when s in ~w(stopped archived stopping archiving resizing), do: :stopped
   defp map_status(s) when s in ~w(destroyed destroying), do: :destroyed
   defp map_status(_), do: :error

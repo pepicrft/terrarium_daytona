@@ -15,13 +15,19 @@ defmodule Terrarium.Providers.DaytonaTest do
     test "maps Daytona states to Terrarium statuses" do
       # We verify the mapping indirectly through the module's public API.
       # Direct integration tests require a live Daytona instance.
-      assert is_atom(Daytona.status(%Terrarium.Sandbox{id: "fake", provider: Daytona, state: %{
-        "api_key" => "test",
-        "api_url" => "http://localhost:0",
-        "toolbox_url" => "http://localhost:0",
-        "sandbox_id" => "fake",
-        "organization_id" => nil
-      }}))
+      assert is_atom(
+               Daytona.status(%Terrarium.Sandbox{
+                 id: "fake",
+                 provider: Daytona,
+                 state: %{
+                   "api_key" => "test",
+                   "api_url" => "http://localhost:0",
+                   "toolbox_url" => "http://localhost:0",
+                   "sandbox_id" => "fake",
+                   "organization_id" => nil
+                 }
+               })
+             )
     end
   end
 end
