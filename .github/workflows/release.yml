@@ -113,10 +113,10 @@ jobs:
           git commit -m "[Release] TerrariumDaytona ${{ steps.plan.outputs.next_version }}"
           git tag -a "${{ steps.plan.outputs.next_version }}" -m "${{ steps.plan.outputs.next_version }}"
 
-          mix hex.publish package --yes
-
           git push origin HEAD:main
           git push origin "${{ steps.plan.outputs.next_version }}"
+
+          mix hex.publish package --yes
 
           echo "release_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
