@@ -100,7 +100,7 @@ defmodule Terrarium.Providers.DaytonaTest do
       expect(Req, :request, fn opts ->
         assert opts[:method] == :post
         assert opts[:url] =~ "/process/execute"
-        {:ok, %Req.Response{status: 200, body: %{"exitCode" => 0, "stdout" => "hello\n", "stderr" => ""}}}
+        {:ok, %Req.Response{status: 200, body: %{"exitCode" => 0, "result" => "hello\n"}}}
       end)
 
       assert {:ok, %Terrarium.Process.Result{exit_code: 0, stdout: "hello\n"}} =
@@ -129,10 +129,11 @@ defmodule Terrarium.Providers.DaytonaTest do
   end
 
   describe "write_file/3" do
-    test "uploads file content" do
+    test "uploads file content as multipart" do
       expect(Req, :request, fn opts ->
         assert opts[:method] == :post
         assert opts[:url] =~ "/files/upload"
+        assert [{:file, {_content, [filename: "test.txt", content_type: "application/octet-stream"]}}] = opts[:form_multipart]
         {:ok, %Req.Response{status: 200, body: ""}}
       end)
 

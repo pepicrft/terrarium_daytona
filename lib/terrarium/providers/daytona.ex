@@ -164,8 +164,8 @@ defmodule Terrarium.Providers.Daytona do
         {:ok,
          %Terrarium.Process.Result{
            exit_code: resp["exitCode"] || 0,
-           stdout: resp["stdout"] || "",
-           stderr: resp["stderr"] || ""
+           stdout: resp["result"] || "",
+           stderr: ""
          }}
 
       {:ok, %{status: status, body: body}} ->
@@ -205,7 +205,9 @@ defmodule Terrarium.Providers.Daytona do
 
     url = "#{toolbox_url}/#{sandbox_id}/files/upload?path=#{URI.encode(path)}"
 
-    case api_request(:post, url, api_key, organization_id, body: content) do
+    case api_request(:post, url, api_key, organization_id,
+           form_multipart: [file: {content, filename: Path.basename(path), content_type: "application/octet-stream"}]
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       {:ok, %{status: status, body: body}} -> {:error, {:api_error, status, body}}
       {:error, reason} -> {:error, reason}
