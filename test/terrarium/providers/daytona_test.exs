@@ -31,6 +31,44 @@ defmodule Terrarium.Providers.DaytonaTest do
     end
   end
 
+  describe "ssh_opts/1" do
+    test "calls the ssh-access API endpoint" do
+      ref = make_ref()
+      pid = self()
+
+      handler = fn event, _measurements, metadata, _config ->
+        send(pid, {ref, event, metadata})
+      end
+
+      events = [[:terrarium, :daytona, :api_request, :start]]
+      handler_id = "test-ssh-opts-#{inspect(ref)}"
+      :telemetry.attach_many(handler_id, events, handler, nil)
+
+      sandbox = %Terrarium.Sandbox{
+        id: "ssh-test",
+        provider: Daytona,
+        state: %{
+          "api_key" => "test-key",
+          "api_url" => "http://localhost:0",
+          "toolbox_url" => "http://localhost:0",
+          "sandbox_id" => "ssh-test",
+          "organization_id" => nil,
+          "ssh_gateway_host" => "ssh.app.daytona.io",
+          "ssh_gateway_port" => 2222,
+          "ssh_token_expires" => 60
+        }
+      }
+
+      # Will fail due to connection refused, but we can verify the URL pattern
+      assert {:error, _} = Daytona.ssh_opts(sandbox)
+
+      assert_receive {^ref, [:terrarium, :daytona, :api_request, :start], %{method: :post, url: url}}
+      assert url =~ "/sandbox/ssh-test/ssh-access?expiresInMinutes=60"
+
+      :telemetry.detach(handler_id)
+    end
+  end
+
   describe "telemetry" do
     test "emits [:terrarium, :daytona, :api_request, :start | :stop] on API calls" do
       ref = make_ref()
