@@ -133,7 +133,10 @@ defmodule Terrarium.Providers.DaytonaTest do
       expect(Req, :request, fn opts ->
         assert opts[:method] == :post
         assert opts[:url] =~ "/files/upload"
-        assert [{:file, {_content, [filename: "test.txt", content_type: "application/octet-stream"]}}] = opts[:form_multipart]
+
+        assert [{:file, {_content, [filename: "test.txt", content_type: "application/octet-stream"]}}] =
+                 opts[:form_multipart]
+
         {:ok, %Req.Response{status: 200, body: ""}}
       end)
 
