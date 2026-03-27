@@ -28,6 +28,7 @@ defmodule Terrarium.Providers.Daytona do
   - `:disk` - disk in GB (optional)
   - `:user` - sandbox user (default: `"daytona"`)
   - `:env` - environment variables map (optional)
+  - `:name` - human-readable name for the sandbox (stored locally, not sent to Daytona)
   - `:auto_stop_interval` - minutes before auto-stop (optional)
   - `:poll_interval` - milliseconds between status polls during creation (default: `1000`)
   - `:create_timeout` - maximum milliseconds to wait for sandbox to start (default: `120_000`)
@@ -49,6 +50,7 @@ defmodule Terrarium.Providers.Daytona do
     api_url = Keyword.get(opts, :api_url, @default_api_url)
     toolbox_url = Keyword.get(opts, :toolbox_url, @default_toolbox_url)
     organization_id = Keyword.get(opts, :organization_id)
+    name = Keyword.get(opts, :name)
     poll_interval = Keyword.get(opts, :poll_interval, @default_poll_interval)
     create_timeout = Keyword.get(opts, :create_timeout, @default_create_timeout)
 
@@ -76,11 +78,13 @@ defmodule Terrarium.Providers.Daytona do
           "sandbox_id" => sandbox_id
         }
 
-        sandbox = %Terrarium.Sandbox{
-          id: sandbox_id,
-          provider: __MODULE__,
-          state: state
-        }
+        sandbox =
+          %Terrarium.Sandbox{
+            id: sandbox_id,
+            provider: __MODULE__,
+            state: state
+          }
+          |> then(fn sb -> if name, do: Map.put(sb, :name, name), else: sb end)
 
         wait_for_started(sandbox, poll_interval, create_timeout)
 
