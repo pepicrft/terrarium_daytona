@@ -13,8 +13,8 @@ Add `terrarium_daytona` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:terrarium, "~> 0.1.0"},
-    {:terrarium_daytona, "~> 0.1.0"}
+    {:terrarium, "~> 0.7.3"},
+    {:terrarium_daytona, "~> 0.4.0"}
   ]
 end
 ```
@@ -46,7 +46,13 @@ config :terrarium,
 - `:disk` - disk in GB (optional)
 - `:user` - sandbox user (default: `"daytona"`)
 - `:env` - environment variables map (optional)
+- `:name` - human-readable name for the sandbox (stored locally, not sent to Daytona)
 - `:auto_stop_interval` - minutes before auto-stop (optional)
+- `:poll_interval` - milliseconds between status polls during creation (default: `1000`)
+- `:create_timeout` - maximum milliseconds to wait for sandbox to start (default: `120_000`)
+- `:ssh_gateway_host` - SSH gateway hostname (default: `"ssh.app.daytona.io"`)
+- `:ssh_gateway_port` - SSH gateway port (default: `2222`)
+- `:ssh_token_expires` - SSH token expiry in minutes (default: `60`)
 
 ## Usage
 
@@ -65,7 +71,11 @@ IO.puts(result.stdout)
 :ok = Terrarium.write_file(sandbox, "/home/daytona/hello.txt", "Hello from Terrarium!")
 {:ok, content} = Terrarium.read_file(sandbox, "/home/daytona/hello.txt")
 
+# Replicate the current BEAM app into the sandbox over SSH
+{:ok, peer_pid, remote_node} = Terrarium.replicate(sandbox, name: :daytona_replica)
+
 # Clean up
+:ok = Terrarium.stop_replica(peer_pid)
 :ok = Terrarium.destroy(sandbox)
 ```
 
