@@ -32,6 +32,9 @@ defmodule Terrarium.Providers.Daytona do
   - `:auto_stop_interval` - minutes before auto-stop (optional)
   - `:poll_interval` - milliseconds between status polls during creation (default: `1000`)
   - `:create_timeout` - maximum milliseconds to wait for sandbox to start (default: `120_000`)
+  - `:ssh_gateway_host` - SSH gateway hostname (default: `"ssh.app.daytona.io"`)
+  - `:ssh_gateway_port` - SSH gateway port (default: `2222`)
+  - `:ssh_token_expires` - SSH token expiry in minutes (default: `60`)
   """
 
   use Terrarium.Provider
@@ -43,6 +46,9 @@ defmodule Terrarium.Providers.Daytona do
   @default_poll_interval 1_000
   @default_create_timeout 120_000
   @default_exec_timeout 120_000
+  @default_ssh_gateway_host "ssh.app.daytona.io"
+  @default_ssh_gateway_port 2222
+  @default_ssh_token_expires 60
 
   @impl true
   def create(opts) do
@@ -53,6 +59,9 @@ defmodule Terrarium.Providers.Daytona do
     name = Keyword.get(opts, :name)
     poll_interval = Keyword.get(opts, :poll_interval, @default_poll_interval)
     create_timeout = Keyword.get(opts, :create_timeout, @default_create_timeout)
+    ssh_gateway_host = Keyword.get(opts, :ssh_gateway_host, @default_ssh_gateway_host)
+    ssh_gateway_port = Keyword.get(opts, :ssh_gateway_port, @default_ssh_gateway_port)
+    ssh_token_expires = Keyword.get(opts, :ssh_token_expires, @default_ssh_token_expires)
 
     body =
       %{}
@@ -75,7 +84,10 @@ defmodule Terrarium.Providers.Daytona do
           "api_url" => api_url,
           "toolbox_url" => toolbox_url,
           "organization_id" => organization_id,
-          "sandbox_id" => sandbox_id
+          "sandbox_id" => sandbox_id,
+          "ssh_gateway_host" => ssh_gateway_host,
+          "ssh_gateway_port" => ssh_gateway_port,
+          "ssh_token_expires" => ssh_token_expires
         }
 
         sandbox =
@@ -156,8 +168,8 @@ defmodule Terrarium.Providers.Daytona do
         {:ok,
          %Terrarium.Process.Result{
            exit_code: resp["exitCode"] || 0,
-           stdout: resp["stdout"] || "",
-           stderr: resp["stderr"] || ""
+           stdout: resp["result"] || "",
+           stderr: ""
          }}
 
       {:ok, %{status: status, body: body}} ->
@@ -197,7 +209,9 @@ defmodule Terrarium.Providers.Daytona do
 
     url = "#{toolbox_url}/#{sandbox_id}/files/upload?path=#{URI.encode(path)}"
 
-    case api_request(:post, url, api_key, organization_id, body: content) do
+    case api_request(:post, url, api_key, organization_id,
+           form_multipart: [file: {content, filename: Path.basename(path), content_type: "application/octet-stream"}]
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       {:ok, %{status: status, body: body}} -> {:error, {:api_error, status, body}}
       {:error, reason} -> {:error, reason}
@@ -220,6 +234,32 @@ defmodule Terrarium.Providers.Daytona do
           |> Enum.sort()
 
         {:ok, names}
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:api_error, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def ssh_opts(%Terrarium.Sandbox{state: state}) do
+    %{
+      "api_key" => api_key,
+      "api_url" => api_url,
+      "sandbox_id" => sandbox_id,
+      "organization_id" => organization_id,
+      "ssh_gateway_host" => host,
+      "ssh_gateway_port" => port,
+      "ssh_token_expires" => expires
+    } = state
+
+    url = "#{api_url}/sandbox/#{sandbox_id}/ssh-access?expiresInMinutes=#{expires}"
+
+    case api_request(:post, url, api_key, organization_id) do
+      {:ok, %{status: status, body: resp}} when status in 200..299 ->
+        {:ok, [host: host, port: port, user: resp["token"], auth: nil]}
 
       {:ok, %{status: status, body: body}} ->
         {:error, {:api_error, status, body}}
