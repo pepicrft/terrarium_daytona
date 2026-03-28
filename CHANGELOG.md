@@ -1,6 +1,19 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.4.0] - 2026-03-28
+
+### Bug Fixes
+
+- fix: Fix exec stdout field and write_file to use multipart upload
+
+- fix: Fix formatting
+
+
+### Features
+
+- feat: Implement ssh_opts/1 for Terrarium.replicate support
+
 ## [0.3.0] - 2026-03-27
 
 ### Features
